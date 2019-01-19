@@ -42,7 +42,7 @@
 // Also add options at the top of this file, see Lit.hlsl.
 
 // Required for SSS, GBuffer texture declaration
-TEXTURE2D(_GBufferTexture0);
+TEXTURE2D_ARRAY(_GBufferTexture0);
 
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/LTCAreaLight/LTCAreaLight.hlsl"
 #include "Packages/com.unity.render-pipelines.high-definition/Runtime/Material/PreIntegratedFGD/PreIntegratedFGD.hlsl"
