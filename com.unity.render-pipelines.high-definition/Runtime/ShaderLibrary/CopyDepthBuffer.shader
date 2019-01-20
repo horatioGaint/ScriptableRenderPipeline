@@ -34,7 +34,7 @@ Shader "Hidden/HDRP/CopyDepthBuffer"
             #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
             #include "Packages/com.unity.render-pipelines.high-definition/Runtime/ShaderLibrary/ShaderVariables.hlsl"
 
-            TEXTURE2D_FLOAT(_InputDepthTexture);
+            TEXTURE2D_ARRAY_FLOAT(_InputDepthTexture);
 
             struct Attributes
             {
@@ -64,7 +64,7 @@ Shader "Hidden/HDRP/CopyDepthBuffer"
             float Frag(Varyings input) : SV_Depth
             {
                 uint2 coord = uint2(input.texcoord.xy * _ScreenSize.xy);
-                return LOAD_TEXTURE2D(_InputDepthTexture, coord).x;
+                return LOAD_TEXTURE2D_EYE(_InputDepthTexture, coord).x;
             }
 
             ENDHLSL
