@@ -36,13 +36,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         {
             get
             {
-                const int kMaxDepth = 2;
-                Debug.Assert(XRGraphics.eyeCount <= kMaxDepth);
+                const int kMaxSlices = 4;
+                Debug.Assert(XRGraphics.eyeCount <= kMaxSlices);
 
                 if (m_ClearTexture2DArray == null)
                 {
-                    m_ClearTexture2DArray = new Texture2DArray(1, 1, kMaxDepth, TextureFormat.ARGB32, false) { name = "Clear Texture2DArray" };
-                    for (int i = 0; i < kMaxDepth; ++i)
+                    m_ClearTexture2DArray = new Texture2DArray(1, 1, kMaxSlices, TextureFormat.ARGB32, false) { name = "Clear Texture2DArray" };
+                    for (int i = 0; i < kMaxSlices; ++i)
                         Graphics.CopyTexture(clearTexture, 0, 0, m_ClearTexture2DArray, i, 0);
                 }
 

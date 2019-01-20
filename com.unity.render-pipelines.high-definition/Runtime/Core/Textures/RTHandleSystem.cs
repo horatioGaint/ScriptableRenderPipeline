@@ -267,7 +267,7 @@ namespace UnityEngine.Experimental.Rendering
             }
 
             // XR override for instancing support
-            VRTextureUsage vrUsage = XRGraphics.OverrideRenderTargetDesc(xrInstancing, ref dimension);
+            VRTextureUsage vrUsage = XRGraphics.OverrideRenderTargetDesc(xrInstancing, ref dimension, ref slices);
 
             // We need to handle this in an explicit way since GraphicsFormat does not expose depth formats. TODO: Get rid of this branch once GraphicsFormat'll expose depth related formats
             RenderTexture rt;
@@ -509,7 +509,7 @@ namespace UnityEngine.Experimental.Rendering
             RTCategory category = allocForMSAA ? RTCategory.MSAA : RTCategory.Regular;
 
             // XR override for instancing support
-            VRTextureUsage vrUsage = XRGraphics.OverrideRenderTargetDesc(xrInstancing, ref dimension);
+            VRTextureUsage vrUsage = XRGraphics.OverrideRenderTargetDesc(xrInstancing, ref dimension, ref slices);
 
             // We need to handle this in an explicit way since GraphicsFormat does not expose depth formats. TODO: Get rid of this branch once GraphicsFormat'll expose depth related formats
             RenderTexture rt;

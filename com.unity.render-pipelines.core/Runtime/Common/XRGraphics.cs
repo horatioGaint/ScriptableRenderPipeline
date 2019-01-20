@@ -130,11 +130,12 @@ namespace UnityEngine.Rendering
             }
         }
 
-        public static VRTextureUsage OverrideRenderTargetDesc(bool xrInstancing, ref TextureDimension dimension)
+        public static VRTextureUsage OverrideRenderTargetDesc(bool xrInstancing, ref TextureDimension dimension, ref int slices)
         {
             if (xrInstancing)
             {
                 dimension = TextureDimension.Tex2DArray;
+                slices = 3; // XRTODO: TEMP to debug
             }
 
             // XRTODO: is this correct?
