@@ -278,9 +278,9 @@ namespace UnityEditor.ShaderGraph
         public void AddNode(AbstractMaterialNode node)
         {
             if (node is AbstractMaterialNode materialNode)
-            {
+        {
                 if (!materialNode.allowedInSubGraph)
-                {
+            {
                     Debug.LogWarningFormat("Attempting to add {0} to Sub Graph. This is not allowed.", materialNode.GetType());
                     return;
                 }
@@ -579,10 +579,10 @@ namespace UnityEditor.ShaderGraph
         public void CollectShaderProperties(PropertyCollector collector, GenerationMode generationMode)
         {
             if (!isSubGraph || generationMode == GenerationMode.Preview)
-            {
-                foreach (var prop in properties)
-                    collector.AddShaderProperty(prop);
-            }
+        {
+            foreach (var prop in properties)
+                collector.AddShaderProperty(prop);
+        }
 
             if (isSubGraph)
             {
@@ -689,8 +689,8 @@ namespace UnityEditor.ShaderGraph
             if (property == null)
                 return;
 
-            var node = property.ToConcreteNode();
-            if (!(node is AbstractMaterialNode materialNode))
+            var node = property.ToConcreteNode() as AbstractMaterialNode;
+            if (node == null)
                 return;
 
             var slot = propertyNode.FindOutputSlot<MaterialSlot>(PropertyNode.OutputSlotId);
@@ -699,7 +699,8 @@ namespace UnityEditor.ShaderGraph
                 return;
 
             node.drawState = propertyNode.drawState;
-            AddNodeNoValidate(materialNode);
+            node.groupGuid = propertyNode.groupGuid;
+            AddNodeNoValidate(node);
 
             foreach (var edge in this.GetEdges(slot.slotReference))
                 ConnectNoValidate(newSlot.slotReference, edge.inputSlot);

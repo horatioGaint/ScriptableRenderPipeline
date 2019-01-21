@@ -4,16 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [5.3.0] - 2018-11-xx
+## [5.3.0] - 2019-01-14
 ### Added
 - LWRP now uses the Unity recorder extension. You can use this to capture the output of Cameras.
 - You can now inject a custom render pass before LWRP renders opaque objects. To do so, implement an `IBeforeRender` interface.
+- LWRP now supports dynamic resolution scaling. The target platform must also support it.
+- LWRP now includes version defines for both C# and Shaders in the format of `LWRP_X_Y_Z_OR_NEWER`. For example, `LWRP_5_3_0_OR_NEWER` defines version 5.3.0.
+- The Terrain Lit Shader now samples Spherical Harmonics if you haven't baked any lightmaps for terrain.
 
 ### Changed
-- You can now only initialize a camera by setting a Background Type. The supported options are Skybox, Solid Color, and Don't Initialize.
+- You can now only initialize a camera by setting a Background Type. The supported options are Skybox, Solid Color, and Don't Care.
 - LWRP now uses non-square shadowmap textures when it renders directional shadows with 2 shadow cascades. 
-- LWRP now uses ARGB2101010 as the HDR format on mobile devices, when this format is supported.
+- LWRP now uses RGB111110 as the HDR format on mobile devices, when this format is supported.
 - Removed `IAfterDepthPrePass` interface.
+- When you create a new LWRP Asset, it will now be initialized with settings that favor performance on mobile platforms.
 
 ### Fixed
 - Several tweaks to reduce bandwidth consumption on mobile devices.
@@ -27,6 +31,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Framedebugger now renders correctly when stepping through drawcalls.
 - Cameras that request MSAA and Opaque Textures now use less frame bandwidth when they render.
 - Fixed rendering in the gamma color space, so it doesn't appear darker.
+- Fixed specular issues on mobile. [case 1109017](https://issuetracker.unity3d.com/issues/scaled-objects-render-shadows-and-specularity-incorrectly-in-the-lwrp-on-device)
+- Fixed issue causing LWRP to create MSAA framebuffer even when MSAA setting was disabled.
+- Post-processing in mobile VR is now forced to be disabled. It was causing many rendering issues.
+- Fixed Editor Previews breaking in Play Mode when VR is enabled. [Case 1109009](https://issuetracker.unity3d.com/issues/lwrp-editor-previews-break-in-play-mode-if-vr-is-enabled)
+- A camera's HDR enable flag is now respected when rendering in XR.
 
 ## [5.2.0] - 2018-11-27
 ### Added
