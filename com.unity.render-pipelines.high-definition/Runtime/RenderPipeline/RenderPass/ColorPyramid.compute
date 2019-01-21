@@ -24,19 +24,35 @@
 
 #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
 
-#pragma kernel KColorGaussian            KERNEL_SIZE=8  MAIN_GAUSSIAN=KColorGaussian
-#pragma kernel KColorDownsample          KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsample
-#pragma kernel KColorDownsampleCopyMip0  KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsampleCopyMip0  COPY_MIP_0
+#pragma kernel KColorGaussian                       KERNEL_SIZE=8  MAIN_GAUSSIAN=KColorGaussian
+#pragma kernel KColorDownsample                     KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsample
+#pragma kernel KColorDownsampleCopyMip0             KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsampleCopyMip0                                 COPY_MIP_0
+#pragma kernel KColorGaussian_Tex2DArray            KERNEL_SIZE=8  MAIN_GAUSSIAN=KColorGaussian_Tex2DArray              USE_TEXTURE_ARRAY
+#pragma kernel KColorDownsample_Tex2DArray          KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsample_Tex2DArray          USE_TEXTURE_ARRAY
+#pragma kernel KColorDownsampleCopyMip0_Tex2DArray  KERNEL_SIZE=8  MAIN_DOWNSAMPLE=KColorDownsampleCopyMip0_Tex2DArray  USE_TEXTURE_ARRAY   COPY_MIP_0
 
+#if USE_TEXTURE_ARRAY
+    #if COPY_MIP_0
+    Texture2DArray<float4> _Source;
+    RWTexture2DArray<float4> _Mip0;
+    #else
+    RWTexture2DArray<float4> _Source;
+    #endif
 
-#if COPY_MIP_0
-Texture2DArray<float4> _Source;
-RWTexture2DArray<float4> _Mip0;
+    RWTexture2DArray<float4> _Destination;
 #else
-RWTexture2DArray<float4> _Source;
-#endif
+    #if COPY_MIP_0
+    Texture2D<float4> _Source;
+    RWTexture2D<float4> _Mip0;
+    #else
+    RWTexture2D<float4> _Source;
+    #endif
 
-RWTexture2DArray<float4> _Destination;
+    RWTexture2D<float4> _Destination;
+
+    #undef PIXEL_COORD3
+    #define PIXEL_COORD3(pixelCoord) pixelCoord
+#endif
 
 SamplerState sampler_LinearClamp;
 
