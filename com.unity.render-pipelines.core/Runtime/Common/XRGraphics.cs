@@ -135,12 +135,14 @@ namespace UnityEngine.Rendering
             if (xrInstancing)
             {
                 dimension = TextureDimension.Tex2DArray;
-                slices = 3; // XRTODO: TEMP to debug
             }
 
             // XRTODO: is this correct?
             if (stereoRenderingMode == StereoRenderingMode.SinglePassInstanced || stereoRenderingMode == StereoRenderingMode.SinglePassMultiView)
+			{
+				slices = (int)eyeCount;
                 return XRGraphics.eyeTextureDesc.vrUsage;
+			}
 
             return VRTextureUsage.None;
         }
