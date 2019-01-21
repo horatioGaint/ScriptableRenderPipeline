@@ -55,7 +55,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         {
             get
             {
-                const int kMaxDepth = 2;
+                const int kMaxDepth = 4;
                 Debug.Assert(XRGraphics.eyeCount <= kMaxDepth);
 
                 if (m_WhiteTexture2DArray == null)
