@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - LWRP now supports dynamic resolution scaling. The target platform must also support it.
 - LWRP now includes version defines for both C# and Shaders in the format of `LWRP_X_Y_Z_OR_NEWER`. For example, `LWRP_5_3_0_OR_NEWER` defines version 5.3.0.
 - The Terrain Lit Shader now samples Spherical Harmonics if you haven't baked any lightmaps for terrain.
+- Priority option now on all standard and particle LWRP shader, this allows tweaking rendering order similar to render queue.
 
 ### Changed
 - You can now only initialize a camera by setting a Background Type. The supported options are Skybox, Solid Color, and Don't Care.
