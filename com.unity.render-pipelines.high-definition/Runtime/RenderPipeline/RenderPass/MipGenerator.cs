@@ -66,6 +66,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         public void RenderMinDepthPyramid(CommandBuffer cmd, RenderTexture texture, HDUtils.PackedMipChainInfo info)
         {
             HDUtils.CheckRTCreated(texture);
+            Debug.Assert(XRGraphics.computePassCount == texture.volumeDepth);
 
             var cs     = m_DepthPyramidCS;
             int kernel = m_DepthDownsampleKernel;
@@ -95,7 +96,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 cmd.SetComputeIntParams(   cs,         HDShaderIDs._DstOffset,         m_DstOffset);
                 cmd.SetComputeTextureParam(cs, kernel, HDShaderIDs._DepthMipChain,     texture);
 
-                cmd.DispatchCompute(cs, kernel, HDUtils.DivRoundUp(dstSize.x, 8), HDUtils.DivRoundUp(dstSize.y, 8), 1);
+                cmd.DispatchCompute(cs, kernel, HDUtils.DivRoundUp(dstSize.x, 8), HDUtils.DivRoundUp(dstSize.y, 8), texture.volumeDepth);
             }
         }
 
@@ -132,6 +133,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             int srcMipLevel  = 0;
             int srcMipWidth  = size.x;
             int srcMipHeight = size.y;
+            int slices = destination.volumeDepth;
+            Debug.Assert(XRGraphics.computePassCount == slices);
 
             if (preferFragment)
             {
@@ -203,19 +206,19 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         cmd.SetComputeTextureParam(cs, downsampleKernelMip0, HDShaderIDs._Source, source, 0);
                         cmd.SetComputeTextureParam(cs, downsampleKernelMip0, HDShaderIDs._Mip0, destination, 0);
                         cmd.SetComputeTextureParam(cs, downsampleKernelMip0, HDShaderIDs._Destination, m_TempColorTargets[kernelIndex]);
-                        cmd.DispatchCompute(cs, downsampleKernelMip0, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, 1);
+                        cmd.DispatchCompute(cs, downsampleKernelMip0, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, slices);
                     }
                     else
                     {
                         cmd.SetComputeTextureParam(cs, downsampleKernel, HDShaderIDs._Source, destination, srcMipLevel);
                         cmd.SetComputeTextureParam(cs, downsampleKernel, HDShaderIDs._Destination, m_TempColorTargets[kernelIndex]);
-                        cmd.DispatchCompute(cs, downsampleKernel, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, 1);
+                        cmd.DispatchCompute(cs, downsampleKernel, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, slices);
                     }
 
                     cmd.SetComputeVectorParam(cs, HDShaderIDs._Size, new Vector4(dstMipWidth, dstMipHeight, 0f, 0f));
                     cmd.SetComputeTextureParam(cs, gaussianKernel, HDShaderIDs._Source, m_TempColorTargets[kernelIndex]);
                     cmd.SetComputeTextureParam(cs, gaussianKernel, HDShaderIDs._Destination, destination, srcMipLevel + 1);
-                    cmd.DispatchCompute(cs, gaussianKernel, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, 1);
+                    cmd.DispatchCompute(cs, gaussianKernel, (dstMipWidth + 7) / 8, (dstMipHeight + 7) / 8, slices);
 
                     srcMipLevel++;
                     srcMipWidth  = srcMipWidth  >> 1;

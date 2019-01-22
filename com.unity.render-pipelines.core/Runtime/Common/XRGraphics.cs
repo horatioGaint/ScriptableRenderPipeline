@@ -122,11 +122,22 @@ namespace UnityEngine.Rendering
             return (uint)(Mathf.CeilToInt((eye * XRSettings.eyeTextureWidth) / 2));
         }
 
-        public static uint eyeCount
+        public static int eyeCount
         {
             get
             {
-                return enabled ? 2u : 1u;
+                return enabled ? 2 : 1;
+            }
+        }
+
+        public static int computePassCount
+        {
+            get
+            {
+                if (stereoRenderingMode == StereoRenderingMode.SinglePassInstanced || stereoRenderingMode == StereoRenderingMode.SinglePassMultiView)
+                    return eyeCount;
+
+                return 1;
             }
         }
 

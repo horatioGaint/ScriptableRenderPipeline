@@ -40,6 +40,9 @@
     #endif
 
     RWTexture2DArray<float4> _Destination;
+
+    #undef PIXEL_COORD3
+    #define PIXEL_COORD3(pixelCoord) uint3(pixelCoord, dispatchThreadId.z)
 #else
     #if COPY_MIP_0
     Texture2D<float4> _Source;
@@ -123,7 +126,7 @@ void BlurHorizontally(uint outIndex, uint leftMostIndex)
     Store1Pixel(outIndex + 1, BlurPixels(s1, s2, s3, s4, s5, s6, s7, s8, s9));
 }
 
-void BlurVertically(uint2 pixelCoord, uint topMostIndex)
+float4 BlurVertically(uint topMostIndex)
 {
     float4 s0, s1, s2, s3, s4, s5, s6, s7, s8;
     Load1Pixel(topMostIndex     , s0);
@@ -136,14 +139,11 @@ void BlurVertically(uint2 pixelCoord, uint topMostIndex)
     Load1Pixel(topMostIndex + 56, s7);
     Load1Pixel(topMostIndex + 64, s8);
 
-    float4 blurred = BlurPixels(s0, s1, s2, s3, s4, s5, s6, s7, s8);
-
-    // Write to the final target
-    _Destination[PIXEL_COORD3(pixelCoord)] = blurred;
+    return BlurPixels(s0, s1, s2, s3, s4, s5, s6, s7, s8);
 }
 
 [numthreads(KERNEL_SIZE, KERNEL_SIZE, 1)]
-void MAIN_GAUSSIAN(uint2 groupId : SV_GroupID, uint2 groupThreadId : SV_GroupThreadID, uint2 dispatchThreadId : SV_DispatchThreadID)
+void MAIN_GAUSSIAN(uint2 groupId : SV_GroupID, uint2 groupThreadId : SV_GroupThreadID, uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     // Upper-left pixel coordinate of quad that this thread will read
     int2 threadUL = (groupThreadId << 1) + (groupId << 3) - 4;
@@ -169,13 +169,13 @@ void MAIN_GAUSSIAN(uint2 groupId : SV_GroupID, uint2 groupThreadId : SV_GroupThr
     GroupMemoryBarrierWithGroupSync();
 
     // Vertically blur the pixels in LDS and write the result to memory
-    BlurVertically(dispatchThreadId, (groupThreadId.y << 3u) + groupThreadId.x);
+    _Destination[PIXEL_COORD3(dispatchThreadId.xy)] = BlurVertically((groupThreadId.y << 3u) + groupThreadId.x);
 }
 
 [numthreads(KERNEL_SIZE, KERNEL_SIZE, 1)]
-void MAIN_DOWNSAMPLE(uint2 dispatchThreadId : SV_DispatchThreadID)
+void MAIN_DOWNSAMPLE(uint3 dispatchThreadId : SV_DispatchThreadID)
 {
-    uint2 offset = dispatchThreadId * 2u;
+    uint2 offset = dispatchThreadId.xy * 2u;
     uint2 size = uint2(_Size.xy) - 1u;
 
     uint2 c00 = min(offset + uint2(0u, 0u), size);
@@ -194,5 +194,5 @@ void MAIN_DOWNSAMPLE(uint2 dispatchThreadId : SV_DispatchThreadID)
     _Mip0[PIXEL_COORD3(c01)] = p01;
     #endif
 
-    _Destination[PIXEL_COORD3(dispatchThreadId)] = (p00 + p01 + p11 + p10) * 0.25;
+    _Destination[PIXEL_COORD3(dispatchThreadId.xy)] = (p00 + p01 + p11 + p10) * 0.25;
 }
