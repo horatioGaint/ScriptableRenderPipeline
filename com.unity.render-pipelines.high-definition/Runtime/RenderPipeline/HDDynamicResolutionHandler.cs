@@ -7,9 +7,17 @@ using UnityEngine.Experimental.Rendering;
 namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
     // This must return a float in the range [0.0f...1.0f]. It is a lerp factor between min screen fraction and max screen fraction.  
-    public delegate float PerformDynamicRes();      // TODO_FCC: Rename this.
+    public delegate float PerformDynamicRes();      
 
-
+    public enum DynamicResScalePolicyType
+    {
+        // If this is the chosen option, then the HDDynamicResolutionHandler expects the m_DynamicResMethod to return a screen percentage to.
+        // The value set will be clamped between the min and max percentage set on the HDRP Asset. 
+        ReturnsPercentage,
+        // If this is the chosen option, then the HDDynamicResolutionHandler expects the m_DynamicResMethod to return a lerp factor t such as
+        // current_screen_percentage = lerp(min percentage, max percentage, t). 
+        ReturnsMinMaxLerpFactor
+    }
 
 
     public class HDDynamicResolutionHandler
@@ -21,8 +29,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         private float m_PrevFraction = -1.0f;
         private bool  m_ForcingRes = false;
 
-        private float prevHWScaleWidth = 1.0f;
-        private float prevHWScaleHeight = 1.0f;
+        private float m_PrevHWScaleWidth = 1.0f;
+        private float m_PrevHWScaleHeight = 1.0f;
+
+        private DynamicResScalePolicyType m_ScalerType = DynamicResScalePolicyType.ReturnsMinMaxLerpFactor;
 
         // Debug
         public Vector2Int cachedOriginalSize { get; private set; }
@@ -77,8 +87,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-        static public void SetDynamicResScaler(PerformDynamicRes scaler)
+        static public void SetDynamicResScaler(PerformDynamicRes scaler, DynamicResScalePolicyType scalerType = DynamicResScalePolicyType.ReturnsMinMaxLerpFactor)
         {
+            s_Instance.m_ScalerType = scalerType;
             s_Instance.m_DynamicResMethod = scaler;
         }
 
@@ -88,9 +99,17 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             if (!m_ForcingRes)
             {
-                float currLerp = m_DynamicResMethod();
-                float lerpFactor = Mathf.Clamp(currLerp, 0.0f, 1.0f);
-                m_CurrentFraction = Mathf.Lerp(m_MinScreenFraction, m_MaxScreenFraction, lerpFactor);
+                if(m_ScalerType == DynamicResScalePolicyType.ReturnsMinMaxLerpFactor)
+                {
+                    float currLerp = m_DynamicResMethod();
+                    float lerpFactor = Mathf.Clamp(currLerp, 0.0f, 1.0f);
+                    m_CurrentFraction = Mathf.Lerp(m_MinScreenFraction, m_MaxScreenFraction, lerpFactor);
+                }
+                else if(m_ScalerType == DynamicResScalePolicyType.ReturnsPercentage)
+                {
+                    float percentageRequested = Mathf.Max(m_DynamicResMethod(), 5.0f);
+                    m_CurrentFraction = Mathf.Clamp(percentageRequested / 100.0f, m_MinScreenFraction, m_MaxScreenFraction);
+                }
             }
 
             if (m_CurrentFraction != m_PrevFraction)
@@ -110,8 +129,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 // Unity can change the scale factor by itself so we need to trigger the Action if that happens as well.
                 if (HardwareDynamicResIsEnabled()) 
                 {
-                    if(ScalableBufferManager.widthScaleFactor != prevHWScaleWidth  ||
-                        ScalableBufferManager.heightScaleFactor != prevHWScaleHeight)
+                    if(ScalableBufferManager.widthScaleFactor != m_PrevHWScaleWidth  ||
+                        ScalableBufferManager.heightScaleFactor != m_PrevHWScaleHeight)
                     {
                         OnResolutionChange();
                     }
@@ -119,8 +138,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 hasSwitchedResolution = false;
             }
 
-            prevHWScaleWidth = ScalableBufferManager.widthScaleFactor;
-            prevHWScaleHeight = ScalableBufferManager.heightScaleFactor;
+            m_PrevHWScaleWidth = ScalableBufferManager.widthScaleFactor;
+            m_PrevHWScaleHeight = ScalableBufferManager.heightScaleFactor;
         }
 
         public bool SoftwareDynamicResIsEnabled()
