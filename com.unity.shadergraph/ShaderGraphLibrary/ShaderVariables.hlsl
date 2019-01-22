@@ -14,9 +14,7 @@
     #define USING_DIRECTIONAL_LIGHT
 #endif
 
-#if defined(UNITY_SINGLE_PASS_STEREO) || defined(UNITY_STEREO_INSTANCING_ENABLED) || defined(UNITY_STEREO_MULTIVIEW_ENABLED)
-    #define USING_STEREO_MATRICES
-#endif
+#include "Packages/com.unity.render-pipelines.core/ShaderLibrary/UnityInstancingEarly.hlsl"
 
 #if defined(USING_STEREO_MATRICES)
     #define glstate_matrix_projection unity_StereoMatrixP[unity_StereoEyeIndex]
