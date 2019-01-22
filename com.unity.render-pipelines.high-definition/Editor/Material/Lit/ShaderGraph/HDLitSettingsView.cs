@@ -27,6 +27,26 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.Drawing
             return new Label(label + text);
         }
 
+        string RenderQueueName(HDRenderQueue.RenderQueueType value)
+        {
+            switch (value)
+            {
+                case HDRenderQueue.RenderQueueType.Opaque: return "Default";
+                case HDRenderQueue.RenderQueueType.AfterPostProcessOpaque: return "After post-process";
+
+                case HDRenderQueue.RenderQueueType.PreRefraction: return "Before refraction";
+                case HDRenderQueue.RenderQueueType.Transparent: return "Default";
+                case HDRenderQueue.RenderQueueType.LowTransparent: return "Low resolution";
+                case HDRenderQueue.RenderQueueType.AfterPostprocessTransparent: return "After post-process";
+
+#if ENABLE_RAYTRACING
+                case HDRenderQueue.RenderQueueType.RaytracingOpaque: return "Raytracing";
+                case HDRenderQueue.RenderQueueType.RaytracingTransparent: return "Raytracing";
+#endif
+                default: throw new Exception();
+            }
+        }
+
         public HDLitSettingsView(HDLitMasterNode node)
         {
             m_Node = node;
@@ -48,9 +68,17 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.Drawing
                 case SurfaceType.Opaque:
                     ps.Add(new PropertyRow(CreateLabel("Rendering Pass", indentLevel)), (row) =>
                     {
-                        row.Add(new EnumField(HDRenderQueue.OpaqueRenderQueue.Default), (field) =>
+                        var valueList = new System.Collections.Generic.List<HDRenderQueue.RenderQueueType>() { HDRenderQueue.RenderQueueType.Opaque,
+                                                                                            HDRenderQueue.RenderQueueType.AfterPostProcessOpaque
+#if ENABLE_RAYTRACING
+                                                                                            , HDRenderQueue.RenderQueueType.RaytracingOpaque };
+#else
+                                                                                            };
+#endif
+
+                        row.Add(new PopupField<HDRenderQueue.RenderQueueType>(valueList, HDRenderQueue.RenderQueueType.Opaque, RenderQueueName, RenderQueueName), (field) =>
                         {
-                            field.value = HDRenderQueue.ConvertToOpaqueRenderQueue(HDRenderQueue.GetOpaqueEquivalent(m_Node.renderingPass));
+                            field.value = HDRenderQueue.GetOpaqueEquivalent(m_Node.renderingPass);
                             field.RegisterValueChangedCallback(ChangeRenderingPass);
                         });
                     });
@@ -69,9 +97,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.Drawing
                                 defaultValue = HDRenderQueue.TransparentRenderQueue.BeforeRefraction;
                                 break;
                         }
-                        row.Add(new EnumField(defaultValue), (field) =>
+                        var valueList = new System.Collections.Generic.List<HDRenderQueue.RenderQueueType>() { HDRenderQueue.RenderQueueType.PreRefraction, 
+                                                                                            HDRenderQueue.RenderQueueType.Transparent, 
+                                                                                            HDRenderQueue.RenderQueueType.LowTransparent,
+                                                                                            HDRenderQueue.RenderQueueType.AfterPostprocessTransparent
+#if ENABLE_RAYTRACING
+                                                                                            , HDRenderQueue.RenderQueueType.RaytracingTransparent };
+#else
+                                                                                            };
+#endif
+                        row.Add(new PopupField<HDRenderQueue.RenderQueueType>(valueList, HDRenderQueue.RenderQueueType.Transparent, RenderQueueName, RenderQueueName), (field) =>
                         {
-                            field.value = HDRenderQueue.ConvertToTransparentRenderQueue(HDRenderQueue.GetTransparentEquivalent(m_Node.renderingPass));
+                            field.value = HDRenderQueue.GetTransparentEquivalent(m_Node.renderingPass);
                             field.RegisterValueChangedCallback(ChangeRenderingPass);
                         });
                     });
@@ -356,16 +393,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline.Drawing
             m_Node.alphaMode = alphaMode;
         }
         
-        void ChangeRenderingPass(ChangeEvent<Enum> evt)
+        void ChangeRenderingPass(ChangeEvent<HDRenderQueue.RenderQueueType> evt)
         {
-            HDRenderQueue.RenderQueueType renderQueueType = HDRenderQueue.RenderQueueType.Unknown;
-            if (evt.newValue is HDRenderQueue.OpaqueRenderQueue)
-                renderQueueType = HDRenderQueue.ConvertFromOpaqueRenderQueue((HDRenderQueue.OpaqueRenderQueue)evt.newValue);
-            else if (evt.newValue is HDRenderQueue.TransparentRenderQueue)
-                renderQueueType = HDRenderQueue.ConvertFromTransparentRenderQueue((HDRenderQueue.TransparentRenderQueue)evt.newValue);
-            else
-                throw new ArgumentException("Unknown kind of RenderQueue, was " + evt.newValue);
-            UpdateRenderingPassValue(renderQueueType);
+            switch(evt.newValue)
+            {
+                case HDRenderQueue.RenderQueueType.Overlay:
+                case HDRenderQueue.RenderQueueType.Unknown:
+                case HDRenderQueue.RenderQueueType.Background:
+                    throw new ArgumentException("Unexpected kind of RenderQueue, was " + evt.newValue);
+                default:
+                    break;
+            };
+            UpdateRenderingPassValue(evt.newValue);
         }
 
         void UpdateRenderingPassValue(HDRenderQueue.RenderQueueType newValue)
