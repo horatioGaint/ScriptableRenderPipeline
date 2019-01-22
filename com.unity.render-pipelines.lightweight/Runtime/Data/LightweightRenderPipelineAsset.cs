@@ -71,8 +71,8 @@ namespace UnityEngine.Rendering.LWRP
 
     public enum RendererType
     {
-        ForwardRenderer,
         Custom,
+        ForwardRenderer,
     }
 
     public class LightweightRenderPipelineAsset : RenderPipelineAsset, ISerializationCallbackReceiver
