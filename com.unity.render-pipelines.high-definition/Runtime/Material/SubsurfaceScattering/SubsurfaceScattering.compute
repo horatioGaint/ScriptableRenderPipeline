@@ -96,16 +96,16 @@ float4 LoadSampleFromCacheMemory(int2 cacheCoord)
 }
 #endif
 
-float4 LoadSampleFromVideoMemory(int2 pixelCoord)
+float4 LoadSampleFromVideoMemory(int2 pixelCoord, uint texArrayIndex)
 {
-    float3 irradiance = LOAD_TEXTURE2D_EYE(_IrradianceSource, pixelCoord).rgb;
-    float  depth      = LOAD_TEXTURE2D_EYE(_DepthTexture,     pixelCoord).r;
+    float3 irradiance = LOAD_TEXTURE2D_ARRAY(_IrradianceSource, pixelCoord, texArrayIndex).rgb;
+    float  depth      = LOAD_TEXTURE2D_ARRAY(_DepthTexture,     pixelCoord, texArrayIndex).r;
 
     return float4(irradiance, LinearEyeDepth(depth, _ZBufferParams));
 }
 
 // Returns {irradiance, linearDepth}.
-float4 LoadSample(int2 pixelCoord, int2 cacheOffset)
+float4 LoadSample(int2 pixelCoord, uint texArrayIndex, int2 cacheOffset)
 {
 #if SSS_USE_LDS_CACHE
     int2 cacheCoord = pixelCoord - cacheOffset;
@@ -120,7 +120,7 @@ float4 LoadSample(int2 pixelCoord, int2 cacheOffset)
     {
         // Always load both irradiance and depth.
         // Avoid dependent texture reads at the cost of extra bandwidth.
-        return LoadSampleFromVideoMemory(pixelCoord);
+        return LoadSampleFromVideoMemory(pixelCoord, texArrayIndex);
     }
 }
 
@@ -158,7 +158,7 @@ float3 ComputeBilateralWeight(float xy2, float z, float mmPerUnit, float3 S, flo
 }
 
 void EvaluateSample(uint i, uint n, uint profileID, uint iR, uint iP, float2 centerCoord, int2 cacheOffset,
-                    float3 shapeParam, float3 centerPosVS, float mmPerUnit, float2 pixelsPerMm,
+                    uint texArrayIndex, float3 shapeParam, float3 centerPosVS, float mmPerUnit, float2 pixelsPerMm,
                     float startAngle, float3 tangentX, float3 tangentY, float4x4 projMatrix,
                     inout float3 totalIrradiance, inout float3 totalWeight)
 {
@@ -192,7 +192,7 @@ void EvaluateSample(uint i, uint n, uint profileID, uint iR, uint iP, float2 cen
         xy2      = r * r;
     #endif
 
-    float4 textureSample = LoadSample(position, cacheOffset);
+    float4 textureSample = LoadSample(position, texArrayIndex, cacheOffset);
     float3 irradiance    = textureSample.rgb;
 
     // Check the results of the stencil test.
@@ -219,20 +219,22 @@ void EvaluateSample(uint i, uint n, uint profileID, uint iR, uint iP, float2 cen
     }
 }
 
-void StoreResult(uint2 pixelCoord, float3 irradiance)
+void StoreResult(uint3 pixelCoord3, float3 irradiance)
 {
 #ifdef USE_INTERMEDIATE_BUFFER
-    _CameraFilteringTexture[PIXEL_COORD3(pixelCoord)] = float4(irradiance, 1);
+    _CameraFilteringTexture[pixelCoord3] = float4(irradiance, 1);
 #else
-    _CameraColorTexture[PIXEL_COORD3(pixelCoord)]    += float4(irradiance, 0);
+    _CameraColorTexture[pixelCoord3]    += float4(irradiance, 0);
 #endif
 }
 
 [numthreads(GROUP_SIZE_2D, 1, 1)]
-void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
-                          uint  groupThreadId : SV_GroupThreadID)
+void SubsurfaceScattering(uint2 groupId          : SV_GroupID,
+                          uint  groupThreadId    : SV_GroupThreadID,
+                          uint3 dispatchThreadId : SV_DispatchThreadID)
 {
     groupThreadId &= GROUP_SIZE_2D - 1; // Help the compiler
+    uint texArrayIndex = dispatchThreadId.z; // XRTODO: can use groupId instead?
 
     // Note: any factor of 64 is a suitable wave size for our algorithm.
     uint waveIndex = WaveReadLaneFirst(groupThreadId / 64);
@@ -250,10 +252,10 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
         float stencilRef = STENCILLIGHTINGUSAGE_SPLIT_LIGHTING;
 
         // Check whether the thread group needs to perform any work.
-        float s00 = LOAD_TEXTURE2D_EYE(_SSSHTile, 2 * groupId + uint2(0, 0)).r;
-        float s10 = LOAD_TEXTURE2D_EYE(_SSSHTile, 2 * groupId + uint2(1, 0)).r;
-        float s01 = LOAD_TEXTURE2D_EYE(_SSSHTile, 2 * groupId + uint2(0, 1)).r;
-        float s11 = LOAD_TEXTURE2D_EYE(_SSSHTile, 2 * groupId + uint2(1, 1)).r;
+        float s00 = LOAD_TEXTURE2D_ARRAY(_SSSHTile, 2 * groupId + uint2(0, 0), texArrayIndex).r;
+        float s10 = LOAD_TEXTURE2D_ARRAY(_SSSHTile, 2 * groupId + uint2(1, 0), texArrayIndex).r;
+        float s01 = LOAD_TEXTURE2D_ARRAY(_SSSHTile, 2 * groupId + uint2(0, 1), texArrayIndex).r;
+        float s11 = LOAD_TEXTURE2D_ARRAY(_SSSHTile, 2 * groupId + uint2(1, 1), texArrayIndex).r;
 
         // Perform the stencil test (reject at the tile rate).
         processGroup = (stencilRef == s00 || stencilRef == s10 || stencilRef == s01 || stencilRef == s11);
@@ -264,7 +266,7 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
 
     UNITY_BRANCH if (!processGroup) { return; }
 
-    float3 centerIrradiance  = LOAD_TEXTURE2D_EYE(_IrradianceSource, pixelCoord).rgb;
+    float3 centerIrradiance  = LOAD_TEXTURE2D_ARRAY(_IrradianceSource, pixelCoord, texArrayIndex).rgb;
     float  centerDepth       = 0;
     float  centerViewZ       = 0;
     bool   passedStencilTest = TestLightingForSSS(centerIrradiance);
@@ -272,7 +274,7 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
     // Save some bandwidth by only loading depth values for SSS pixels.
     UNITY_BRANCH if (passedStencilTest)
     {
-        centerDepth = LOAD_TEXTURE2D_EYE(_DepthTexture, pixelCoord).r;
+        centerDepth = LOAD_TEXTURE2D_ARRAY(_DepthTexture, pixelCoord, texArrayIndex).r;
         centerViewZ = LinearEyeDepth(centerDepth, _ZBufferParams);
     }
 
@@ -317,13 +319,13 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
 
         uint2  cacheCoord2 = 2 * (startQuad + quadCoord) + DeinterleaveQuad(laneIndex);
         int2   pixelCoord2 = (int2)(groupOffset + cacheCoord2) - TEXTURE_CACHE_BORDER;
-        float3 irradiance2 = LOAD_TEXTURE2D_EYE(_IrradianceSource, pixelCoord2).rgb;
+        float3 irradiance2 = LOAD_TEXTURE2D_ARRAY(_IrradianceSource, pixelCoord2, texArrayIndex).rgb;
         float  viewZ2      = 0;
 
         // Save some bandwidth by only loading depth values for SSS pixels.
         UNITY_BRANCH if (TestLightingForSSS(irradiance2))
         {
-            viewZ2 = LinearEyeDepth(LOAD_TEXTURE2D_EYE(_DepthTexture, pixelCoord2).r, _ZBufferParams);
+            viewZ2 = LinearEyeDepth(LOAD_TEXTURE2D_ARRAY(_DepthTexture, pixelCoord2, texArrayIndex).r, _ZBufferParams);
         }
 
         // Populate the border region of the LDS cache.
@@ -372,13 +374,14 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
 
     uint   texturingMode = GetSubsurfaceScatteringTexturingMode(profileID);
     float3 albedo        = ApplySubsurfaceScatteringTexturingMode(texturingMode, sssData.diffuseColor);
+    uint3 pixelCoord3    = uint3(pixelCoord, texArrayIndex);
 
     UNITY_BRANCH if (distScale == 0 || maxDistInPixels < 1)
     {
         #if SSS_DEBUG_LOD
-            StoreResult(pixelCoord, float3(0, 0, 1));
+            StoreResult(pixelCoord3, float3(0, 0, 1));
         #else
-            StoreResult(pixelCoord, albedo * centerIrradiance);
+            StoreResult(pixelCoord3, albedo * centerIrradiance);
         #endif
             return;
     }
@@ -405,7 +408,7 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
     float3 viewDirVS = normalize(centerPosVS);
     if (dot(normalVS, viewDirVS) >= 0)
     {
-        StoreResult(pixelCoord, float3(1, 1, 1));
+        StoreResult(pixelCoord3, float3(1, 1, 1));
         return;
     }
 #endif
@@ -424,7 +427,7 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
     bool useNearFieldKernel = SSS_ENABLE_NEAR_FIELD && maxDistInPixels > SSS_LOD_THRESHOLD;
 
 #if SSS_DEBUG_LOD
-    StoreResult(pixelCoord, useNearFieldKernel ? float3(1, 0, 0) : float3(0.5, 0.5, 0));
+    StoreResult(pixelCoord3, useNearFieldKernel ? float3(1, 0, 0) : float3(0.5, 0.5, 0));
     return;
 #endif
 
@@ -454,14 +457,14 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
     {
         // Integrate over the image or tangent plane in the view space.
         EvaluateSample(i, n, profileID, iR, iP, pixelCoord + 0.5, cacheOffset,
-                       shapeParam, centerPosVS, mmPerUnit, pixelsPerMm,
+                       texArrayIndex, shapeParam, centerPosVS, mmPerUnit, pixelsPerMm,
                        startAngle, tangentX, tangentY, projMatrix,
                        totalIrradiance, totalWeight);
     }
 
     UNITY_BRANCH if (!useNearFieldKernel)
     {
-         StoreResult(pixelCoord, albedo * totalIrradiance / totalWeight);
+         StoreResult(pixelCoord3, albedo * totalIrradiance / totalWeight);
          return;
     }
 
@@ -470,10 +473,10 @@ void SubsurfaceScattering(uint2 groupId       : SV_GroupID,
     {
         // Integrate over the image or tangent plane in the view space.
         EvaluateSample(i, n, profileID, iR, iP, pixelCoord + 0.5, cacheOffset,
-                       shapeParam, centerPosVS, mmPerUnit, pixelsPerMm,
+                       texArrayIndex, shapeParam, centerPosVS, mmPerUnit, pixelsPerMm,
                        startAngle, tangentX, tangentY, projMatrix,
                        totalIrradiance, totalWeight);
     }
 
-    StoreResult(pixelCoord, albedo * totalIrradiance / totalWeight);
+    StoreResult(pixelCoord3, albedo * totalIrradiance / totalWeight);
 }

@@ -218,12 +218,15 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 int numTilesX = ((int)(hdCamera.textureWidthScaling.x * hdCamera.screenSize.x) + 15) / 16;
                 int numTilesY = ((int)hdCamera.screenSize.y + 15) / 16;
 
+                // Sanity check for stereo instancing
+                Debug.Assert(XRGraphics.computePassCount == m_CameraFilteringBuffer.rt.volumeDepth);
+
                 if (NeedTemporarySubsurfaceBuffer() || hdCamera.frameSettings.IsEnabled(FrameSettingsField.MSAA))
                 {
                     cmd.SetComputeTextureParam(m_SubsurfaceScatteringCS, sssKernel, HDShaderIDs._CameraFilteringBuffer, m_CameraFilteringBuffer);
 
                     // Perform the SSS filtering pass which fills 'm_CameraFilteringBufferRT'.
-                    cmd.DispatchCompute(m_SubsurfaceScatteringCS, sssKernel, numTilesX, numTilesY, 1);
+                    cmd.DispatchCompute(m_SubsurfaceScatteringCS, sssKernel, numTilesX, numTilesY, XRGraphics.computePassCount);
 
                     cmd.SetGlobalTexture(HDShaderIDs._IrradianceSource, m_CameraFilteringBuffer);  // Cannot set a RT on a material
 
@@ -235,7 +238,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                     cmd.SetComputeTextureParam(m_SubsurfaceScatteringCS, m_SubsurfaceScatteringKernel, HDShaderIDs._CameraColorTexture, colorBufferRT);
 
                     // Perform the SSS filtering pass which performs an in-place update of 'colorBuffer'.
-                    cmd.DispatchCompute(m_SubsurfaceScatteringCS, m_SubsurfaceScatteringKernel, numTilesX, numTilesY, 1);
+                    cmd.DispatchCompute(m_SubsurfaceScatteringCS, m_SubsurfaceScatteringKernel, numTilesX, numTilesY, XRGraphics.computePassCount);
                 }
             }
         }
