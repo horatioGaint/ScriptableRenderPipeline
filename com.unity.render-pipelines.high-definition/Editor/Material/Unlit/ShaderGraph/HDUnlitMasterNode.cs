@@ -72,9 +72,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
         }
 
-        //could be either BaseUnlitGUI.OpaqueRenderQueue or BaseUnlitGUI.TransparentRenderQueue
         [SerializeField]
-        HDRenderQueue.RenderQueueType m_RenderingPass = HDRenderQueue.RenderQueueType.Opaque;
+        HDRenderQueue.RenderQueueType m_RenderingPass = HDRenderQueue.RenderQueueType.Unknown;
 
         public HDRenderQueue.RenderQueueType renderingPass
         {
@@ -104,21 +103,8 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
             }
         }
 
-        [SerializeField]
-        bool m_DrawBeforeRefraction;
-
-        public ToggleData drawBeforeRefraction
-        {
-            get { return new ToggleData(m_DrawBeforeRefraction); }
-            set
-            {
-                if (m_DrawBeforeRefraction == value.isOn)
-                    return;
-                m_DrawBeforeRefraction = value.isOn;
-                UpdateNodeAfterDeserialization();
-                Dirty(ModificationScope.Topological);
-            }
-        }
+        [SerializeField, Obsolete("Kept for data migration")]
+        internal bool m_DrawBeforeRefraction;
 
         [SerializeField]
         bool m_Distortion;
