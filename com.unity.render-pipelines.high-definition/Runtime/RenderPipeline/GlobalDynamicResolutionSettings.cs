@@ -8,12 +8,13 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
     public enum DynamicResolutionType : byte
     {
         Software,
-        Hardware,   // Not yet supported
+        //Hardware,   // Has lots of problems on platform. Disabling this while we investigate.
         //Temporal    // Not yet supported
     }
 
     public enum DynamicResUpscaleFilter : byte
     {
+        Point,
         Bilinear,
         CatmullRom,
         Lanczos, 

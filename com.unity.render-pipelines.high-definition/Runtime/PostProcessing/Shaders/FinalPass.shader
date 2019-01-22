@@ -4,11 +4,12 @@ Shader "Hidden/HDRP/FinalPass"
 
         #pragma target 4.5
         #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
+        #pragma enable_d3d11_debug_symbols
 
         #pragma multi_compile _ FXAA
         #pragma multi_compile _ GRAIN
 
-        #pragma multi_compile NO_UPSCALE BILINEAR CATMULL_ROM_4 LANCZOS
+        #pragma multi_compile NO_UPSCALE BILINEAR CATMULL_ROM_4 LANCZOS POINT
 
 
         #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/Common.hlsl"
@@ -62,7 +63,7 @@ Shader "Hidden/HDRP/FinalPass"
         #elif LANCZOS
             return Lanczos(_InputTexture, UV);
         #else
-            return Bilinear(_InputTexture, UV);
+            return Nearest(_InputTexture, UV);
         #endif
         }
 

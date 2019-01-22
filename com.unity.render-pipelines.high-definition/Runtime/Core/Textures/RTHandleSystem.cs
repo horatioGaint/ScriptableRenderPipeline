@@ -93,15 +93,27 @@ namespace UnityEngine.Experimental.Rendering
 
         public void SetHardwareDynamicResolutionState(bool enableHWDynamicRes)
         {
-            if(enableHWDynamicRes != m_HardwareDynamicResRequested)
+            if(enableHWDynamicRes != m_HardwareDynamicResRequested && m_AutoSizedRTsArray != null)
             {
                 m_HardwareDynamicResRequested = enableHWDynamicRes;
 
                 for (int i = 0, c = m_AutoSizedRTsArray.Length; i < c; ++i)
                 {
                     var rth = m_AutoSizedRTsArray[i];
-                    var rt = rth.m_RT;
-                    rt.useDynamicScale = m_HardwareDynamicResRequested && rth.m_EnableHWDynamicSize;
+
+                    // Grab the render texture
+                    var renderTexture = rth.m_RT;
+                    if(renderTexture)
+                    {
+                        // Free the previous version
+                        renderTexture.Release();
+
+                        renderTexture.useDynamicScale = m_HardwareDynamicResRequested && rth.m_EnableHWDynamicSize;
+
+                        // Create the render texture
+                        renderTexture.Create();
+                    }
+
                 }
             }
         }

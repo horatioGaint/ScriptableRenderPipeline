@@ -253,6 +253,10 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
         public void Render(CommandBuffer cmd, HDCamera camera, BlueNoise blueNoise, RTHandle colorBuffer, RTHandle lightingBuffer)
         {
+            HDDynamicResolutionHandler dynResHandler = HDDynamicResolutionHandler.instance;
+            if (dynResHandler.HardwareDynamicResIsEnabled() && dynResHandler.hasSwitchedResolution)
+                m_Pool.Cleanup();
+
             void PoolSource(ref RTHandle src, RTHandle dst)
             {
                 // Special case to handle the source buffer, we only want to send it back to our
@@ -393,7 +397,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
                 // TODO: User effects go here
 
-                if(HDDynamicResolutionHandler.instance.GetCurrentScale() != 1.0f &&     // Dynamic resolution is on.
+                if(dynResHandler.SoftwareDynamicResIsEnabled() &&     // Dynamic resolution is on.
                     camera.antialiasing == AntialiasingMode.FastApproximateAntialiasing)
                 {
                     using (new ProfilingSample(cmd, "FXAA", CustomSamplerId.FXAA.GetSampler()))
@@ -1917,11 +1921,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             var dynResHandler = HDDynamicResolutionHandler.instance;
             float dynamicResScale = dynResHandler.GetCurrentScale();
-            bool dynamicResIsOn = dynResHandler.SoftwareDynamicResIsEnabled();
-            if (dynamicResIsOn)
+            bool swDynamicResIsOn = camera.isMainGameView && dynResHandler.SoftwareDynamicResIsEnabled();
+            if (swDynamicResIsOn)
             {
                 switch(dynResHandler.filter)
                 {
+                    case DynamicResUpscaleFilter.Point:
+                        m_FinalPassMaterial.EnableKeyword("POINT");
+                        break;
                     case DynamicResUpscaleFilter.Bilinear:
                         m_FinalPassMaterial.EnableKeyword("BILINEAR");
                         break;
@@ -1938,7 +1945,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                 m_FinalPassMaterial.EnableKeyword("NO_UPSCALE");
             }
 
-            if (camera.antialiasing == AntialiasingMode.FastApproximateAntialiasing && !dynamicResIsOn)
+            if (camera.antialiasing == AntialiasingMode.FastApproximateAntialiasing && !swDynamicResIsOn)
                 m_FinalPassMaterial.EnableKeyword("FXAA");
 
             if (m_FilmGrain.IsActive())
@@ -1993,8 +2000,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
 
             // Blit to backbuffer
             Rect backBufferRect = camera.viewport;
-            backBufferRect.width  = dynResHandler.cachedOriginalSize.x;
-            backBufferRect.height = dynResHandler.cachedOriginalSize.y;
+            if(swDynamicResIsOn)
+            {
+                backBufferRect.width = dynResHandler.cachedOriginalSize.x;
+                backBufferRect.height = dynResHandler.cachedOriginalSize.y;
+            }
 
             HDUtils.DrawFullScreen(cmd, backBufferRect, m_FinalPassMaterial, BuiltinRenderTextureType.CameraTarget, null, pass);
         }
@@ -2026,8 +2036,11 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         continue;
 
                     while (stack.Count > 0)
+                    {
                         RTHandles.Release(stack.Pop());
+                    }
                 }
+                m_Tracker = 0;
 
                 m_Targets.Clear();
             }
@@ -2052,6 +2065,7 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             public void Recycle(RTHandle rt)
             {
                 Assert.IsNotNull(rt);
+
                 var hashCode = ComputeHashCode(rt.scaleFactor.x, rt.scaleFactor.y, (int)rt.rt.graphicsFormat, rt.rt.useMipMap);
 
                 if (!m_Targets.TryGetValue(hashCode, out var stack))
@@ -2064,8 +2078,12 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            int ComputeHashCode(float scaleX, float scaleY, int format, bool mipmap)
+            int ComputeHashCode(float scaleXx, float scaleYY, int format, bool mipmap)
             {
+                // This is fucked up wrong. TODO_FCC
+                float scaleY = scaleYY * HDDynamicResolutionHandler.instance.GetCurrentScale();
+                float scaleX = scaleXx * HDDynamicResolutionHandler.instance.GetCurrentScale();
+
                 int hashCode = 17;
 
                 unchecked

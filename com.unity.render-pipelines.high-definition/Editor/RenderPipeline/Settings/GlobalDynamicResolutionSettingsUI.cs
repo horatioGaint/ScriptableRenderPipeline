@@ -48,14 +48,18 @@ namespace UnityEditor.Experimental.Rendering.HDPipeline
                 {
                     EditorGUILayout.PropertyField(serialized.softwareUpsamplingFilter, k_UpsampleFilter);
                 }
-                EditorGUILayout.DelayedFloatField(serialized.maxPercentage, k_MaxPercentage);
-                EditorGUILayout.DelayedFloatField(serialized.minPercentage, k_MinPercentage);
+                if (!serialized.forcePercentage.boolValue)
+                {
+                    EditorGUILayout.DelayedFloatField(serialized.minPercentage, k_MinPercentage);
+                    EditorGUILayout.DelayedFloatField(serialized.maxPercentage, k_MaxPercentage);
+                }
 
                 EditorGUILayout.PropertyField(serialized.forcePercentage, k_ForceScreenPercentage);
                 if (serialized.forcePercentage.boolValue)
                 {
                     EditorGUILayout.DelayedFloatField(serialized.forcedPercentage, k_ForcedScreenPercentage);
                 }
+
             }
 
 

@@ -127,7 +127,7 @@ float3 ProcessSampleFastPath(uint sampleNumber, float2 dir, float invSampleCount
     float2 currDir = dirSign * dir;
 
     float  offsetLength = (sampleNumber + 0.5) + (dirSign * (randomVal - 0.5));
-    float2 sampleUV = min(centralUV + (offsetLength*invSampleCount) * currDir, 1.0f) * _ScreenToTargetScale.xy;
+    float2 sampleUV = min(centralUV + (offsetLength*invSampleCount) * currDir, 1.0f - 0.5f * _ScreenSize.zw) * _ScreenToTargetScale.xy;
 
     float3 sampleColor    = SAMPLE_TEXTURE2D_LOD(_InputTexture, s_point_clamp_sampler, sampleUV, 0).xyz;
 
@@ -139,7 +139,7 @@ float4 ProcessSample(uint sampleNumber, float2 dir, float invSampleCount, float2
     float2 currDir = dirSign * dir;
 
     float  offsetLength = (sampleNumber + 0.5) + (dirSign * (randomVal - 0.5));
-    float2 sampleUV = min(centralUV + (offsetLength*invSampleCount) * currDir, 1.0f) * _ScreenToTargetScale.xy;
+    float2 sampleUV = min(centralUV + (offsetLength*invSampleCount) * currDir, 1.0f - 0.5f * _ScreenSize.zw) * _ScreenToTargetScale.xy;
 
     float3 sampleVelDepth = SAMPLE_TEXTURE2D_LOD(_VelocityAndDepth, s_point_clamp_sampler, sampleUV, 0).xyz;
     float3 sampleColor    = SAMPLE_TEXTURE2D_LOD(_InputTexture, s_point_clamp_sampler, sampleUV, 0).xyz;

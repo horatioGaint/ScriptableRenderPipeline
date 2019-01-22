@@ -6,13 +6,6 @@ using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine.Experimental.Rendering.HDPipeline
 {
-    public enum DynResolutionType
-    {
-        Hardware,
-        Software,
-        TemporalSoftware
-    };
-
     // This must return a float in the range [0.0f...1.0f]. It is a lerp factor between min screen fraction and max screen fraction.  
     public delegate float PerformDynamicRes();      // TODO_FCC: Rename this.
 
@@ -27,6 +20,9 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         private float m_CurrentFraction = 1.0f;
         private float m_PrevFraction = -1.0f;
         private bool  m_ForcingRes = false;
+
+        private float prevHWScaleWidth = 1.0f;
+        private float prevHWScaleHeight = 1.0f;
 
         // Debug
         public Vector2Int cachedOriginalSize { get; private set; }
@@ -81,16 +77,14 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
         }
 
-
-        public void SetDynamicResScaler(PerformDynamicRes scaler)
+        static public void SetDynamicResScaler(PerformDynamicRes scaler)
         {
-            m_DynamicResMethod = scaler;
+            s_Instance.m_DynamicResMethod = scaler;
         }
 
         public void Update(GlobalDynamicResolutionSettings settings, Action OnResolutionChange = null)
         {
             ProcessSettings(settings);
-
 
             if (!m_ForcingRes)
             {
@@ -103,17 +97,30 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             {
                 m_PrevFraction = m_CurrentFraction;
                 hasSwitchedResolution = true;
+
+                if (HardwareDynamicResIsEnabled())
+                {
+                    ScalableBufferManager.ResizeBuffers(m_CurrentFraction, m_CurrentFraction);
+                }
+
                 OnResolutionChange();
             }
             else
             {
+                // Unity can change the scale factor by itself so we need to trigger the Action if that happens as well.
+                if (HardwareDynamicResIsEnabled()) 
+                {
+                    if(ScalableBufferManager.widthScaleFactor != prevHWScaleWidth  ||
+                        ScalableBufferManager.heightScaleFactor != prevHWScaleHeight)
+                    {
+                        OnResolutionChange();
+                    }
+                }
                 hasSwitchedResolution = false;
             }
 
-            if (settings.dynResType == DynamicResolutionType.Hardware)
-            {
-                ScalableBufferManager.ResizeBuffers(m_CurrentFraction, m_CurrentFraction);
-            }
+            prevHWScaleWidth = ScalableBufferManager.widthScaleFactor;
+            prevHWScaleHeight = ScalableBufferManager.heightScaleFactor;
         }
 
         public bool SoftwareDynamicResIsEnabled()
@@ -122,28 +129,34 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
         }
         public bool HardwareDynamicResIsEnabled()
         {
-            return m_Enabled && type == DynamicResolutionType.Hardware;
+            return false;
+            // This has lots of problems with platform. Momentarily disabling it until we solve the issues.
+            // return m_Enabled && type == DynamicResolutionType.Hardware;
         }
-
 
         public Vector2Int GetRTHandleScale(Vector2Int size)
         {
-            if(!m_Enabled && type == DynamicResolutionType.Hardware)
+            cachedOriginalSize = size;
+
+            if(!m_Enabled)
             {
                 return size;
             }
 
-            cachedOriginalSize = size;
-            Vector2Int scaledSize = new Vector2Int(Mathf.CeilToInt(size.x * m_CurrentFraction), Mathf.CeilToInt(size.y * m_CurrentFraction));
+            float scaleFractionX = m_CurrentFraction;
+            float scaleFractionY = m_CurrentFraction;
+            if(HardwareDynamicResIsEnabled())
+            {
+                scaleFractionX = ScalableBufferManager.widthScaleFactor;
+                scaleFractionY = ScalableBufferManager.heightScaleFactor;
+            }
+
+            Vector2Int scaledSize = new Vector2Int(Mathf.CeilToInt(size.x * scaleFractionX), Mathf.CeilToInt(size.y * scaleFractionY));
             scaledSize.x += (1 & scaledSize.x);
             scaledSize.y += (1 & scaledSize.y);
-            if (hasSwitchedResolution)
-            {
-                Debug.Log("X: "+scaledSize.x + " Y: "+scaledSize.y);
-            }
+
             return scaledSize;
         }
-
 
         public float GetCurrentScale()
         {
