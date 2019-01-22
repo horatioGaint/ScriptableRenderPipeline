@@ -278,9 +278,9 @@ namespace UnityEditor.ShaderGraph
         public void AddNode(AbstractMaterialNode node)
         {
             if (node is AbstractMaterialNode materialNode)
-        {
-                if (!materialNode.allowedInSubGraph)
             {
+                if (isSubGraph && !materialNode.allowedInSubGraph)
+                {
                     Debug.LogWarningFormat("Attempting to add {0} to Sub Graph. This is not allowed.", materialNode.GetType());
                     return;
                 }
