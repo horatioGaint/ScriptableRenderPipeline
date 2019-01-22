@@ -2036,11 +2036,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
                         continue;
 
                     while (stack.Count > 0)
-                    {
                         RTHandles.Release(stack.Pop());
-                    }
                 }
-                m_Tracker = 0;
 
                 m_Targets.Clear();
             }
@@ -2065,7 +2062,6 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             public void Recycle(RTHandle rt)
             {
                 Assert.IsNotNull(rt);
-
                 var hashCode = ComputeHashCode(rt.scaleFactor.x, rt.scaleFactor.y, (int)rt.rt.graphicsFormat, rt.rt.useMipMap);
 
                 if (!m_Targets.TryGetValue(hashCode, out var stack))
@@ -2078,12 +2074,8 @@ namespace UnityEngine.Experimental.Rendering.HDPipeline
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            int ComputeHashCode(float scaleXx, float scaleYY, int format, bool mipmap)
+            int ComputeHashCode(float scaleX, float scaleY, int format, bool mipmap)
             {
-                // This is fucked up wrong. TODO_FCC
-                float scaleY = scaleYY * HDDynamicResolutionHandler.instance.GetCurrentScale();
-                float scaleX = scaleXx * HDDynamicResolutionHandler.instance.GetCurrentScale();
-
                 int hashCode = 17;
 
                 unchecked
