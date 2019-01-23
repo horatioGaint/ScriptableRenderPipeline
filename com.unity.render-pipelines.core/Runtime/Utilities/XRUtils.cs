@@ -8,7 +8,7 @@ namespace UnityEngine.Rendering
             if ((!XRGraphics.enabled) || (!camera.stereoEnabled) || (!stereoEnabled))
                 return;
             UnityEngine.RectInt normalizedCamViewport = new UnityEngine.RectInt(0, 0, camera.pixelWidth, camera.pixelHeight);
-            cmd.DrawOcclusionMesh(normalizedCamViewport);
+            //cmd.DrawOcclusionMesh(normalizedCamViewport);
 #endif
         }
 

@@ -39,7 +39,7 @@ Shader "HDRP/Decal"
 
     #pragma target 4.5
     #pragma only_renderers d3d11 ps4 xboxone vulkan metal switch
-    //#pragma enable_d3d11_debug_symbols
+    #pragma enable_d3d11_debug_symbols
 
     //-------------------------------------------------------------------------------------
     // Variant

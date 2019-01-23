@@ -16,6 +16,7 @@ void MeshDecalsPositionZBias(inout VaryingsToPS input)
 
 PackedVaryingsType Vert(AttributesMesh inputMesh)
 {
+    UNITY_SETUP_INSTANCE_ID(inputMesh);
     VaryingsType varyingsType;
     varyingsType.vmesh = VertMesh(inputMesh);
 #if (SHADERPASS == SHADERPASS_DBUFFER_MESH)
@@ -28,6 +29,7 @@ void Frag(  PackedVaryingsToPS packedInput,
             OUTPUT_DBUFFER(outDBuffer)
             )
 {
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(packedInput);
     FragInputs input = UnpackVaryingsMeshToFragInputs(packedInput.vmesh);
     DecalSurfaceData surfaceData;
 

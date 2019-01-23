@@ -25,6 +25,7 @@ PackedVaryingsToPS Vert(AttributesMesh inputMesh)
 
     UNITY_SETUP_INSTANCE_ID(inputMesh);
     UNITY_TRANSFER_INSTANCE_ID(inputMesh, output.vmesh);
+    UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(output);
 
     // Output UV coordinate in vertex shader
     float2 uv = float2(0.0, 0.0);
@@ -74,6 +75,7 @@ PackedVaryingsToPS Vert(AttributesMesh inputMesh)
 
 float4 Frag(PackedVaryingsToPS packedInput) : SV_Target
 {
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(packedInput);
     FragInputs input = UnpackVaryingsMeshToFragInputs(packedInput.vmesh);
 
     // input.positionSS is SV_Position
