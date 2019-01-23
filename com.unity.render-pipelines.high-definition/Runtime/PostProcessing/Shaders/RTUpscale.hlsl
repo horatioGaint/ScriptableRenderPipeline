@@ -32,7 +32,7 @@ float3 CatmullRomFourSamples(TEXTURE2D(_InputTexture), float2 UV)
 
 
 // https://en.wikipedia.org/wiki/Lanczos_resampling
-// TODO_FCC: Revisit derivation.
+// TODO: Revisit derivation.
 float3 Lanczos(TEXTURE2D(_InputTexture), float2 inUV)
 {
     // Lanczos 3
