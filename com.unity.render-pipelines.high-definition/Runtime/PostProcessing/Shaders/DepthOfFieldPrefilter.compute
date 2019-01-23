@@ -74,8 +74,8 @@ void MAIN(uint2 dispatchThreadId : SV_DispatchThreadID)
     float nearCoCAcc = 0.0;
 
     // Avoid bleeding with the RTHandle autosize system
-    float2 maxCoordColor = _ScreenToTargetScale.xy - texelSize;
-    float2 maxCoordCoC = _CoCTargetScale.xy - texelSize;
+    float2 maxCoordColor =  (1.0f - 0.5f*texelSize) * _ScreenToTargetScale.xy;
+    float2 maxCoordCoC = (1.0f - 0.5f*texelSize) * _CoCTargetScale.xy;
 
     UNITY_UNROLL
     for (uint i = 0; i < kTapCount; i++)

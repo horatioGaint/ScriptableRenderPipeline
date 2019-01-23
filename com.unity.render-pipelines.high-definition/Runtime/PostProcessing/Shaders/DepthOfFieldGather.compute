@@ -95,9 +95,9 @@ void MAIN(uint2 dispatchThreadId : SV_DispatchThreadID)
     // Avoid bleeding with the RTHandle autosize system
 #if FAR
     // A bit more generous maxCoord because of trilinear being involved.
-    float2 maxCoord = _ScreenToTargetScale.xy - 4.0f * _TexelSize.zw;
+    float2 maxCoord = (1.0 - 2.0f * _TexelSize.zw) * _ScreenToTargetScale.xy;
 #else
-    float2 maxCoord = _ScreenToTargetScale.xy - _TexelSize.zw;
+    float2 maxCoord = (1.0 - _TexelSize.zw) * _ScreenToTargetScale.xy;
 #endif
     float4 acc = 0.0;
     float nearWeightAcc = 0.0;

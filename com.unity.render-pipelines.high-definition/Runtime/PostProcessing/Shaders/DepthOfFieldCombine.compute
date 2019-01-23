@@ -41,7 +41,7 @@ void MAIN(uint2 dispatchThreadId : SV_DispatchThreadID)
     float2 uv = posInputs.positionNDC * _ScreenToTargetScale.xy;
 
     float3 outColor = LOAD_TEXTURE2D(_InputTexture, posInputs.positionSS).xyz;
-    float4 bicubicWnd = float4(_ScreenSize.xy * _TargetScale.y, 1.0 / (_ScreenSize.xy * _TargetScale.y));
+    float4 bicubicWnd = float4(_ScreenSize.xy * _TargetScale.y * rcp(_ScreenToTargetScale.xy), 1.0 / (_ScreenSize.xy * _TargetScale.y* rcp(_ScreenToTargetScale.xy)));
 
     // Avoid bleeding with the RTHandle autosize system
     float2 maxCoord = (_ScreenToTargetScale.xy - bicubicWnd.zw);
